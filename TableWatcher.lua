@@ -1,26 +1,42 @@
-local function SpyOnTable(t)
-    -- Create a proxy table to watch the original table
-    local proxy = { };
+local TestTable = { };
 
-    local mt = {
-        __index = t,
+local function watch(tabWatching, callback)
+	local _main = { };
 
-        __newindex = function(t, k, v)
-            print(string.format("Setting t[%s] to %s", tostring(k), tostring(v)));
-            rawset(t, k, v);
-        end
-    };
+	setmetatable(tabWatching, {
+		__index = function(self, key)
+            -- Access key
+			return _main[key];
+		end,
 
-    -- Set the metatable to the proxy table
-    setmetatable(proxy, mt);
-    return proxy;
+		__newindex = function(self, key, value)
+			-- Capture the old value
+			local old_value = rawget(self, key);
+			
+            -- Set callback
+			callback(key, value);
+
+            -- Update old value
+			_main[key] = value;
+		end,
+	});
 end
 
-local TableToWatch = {};
-TableToWatch = SpyOnTable(TableToWatch);
+-- Watcher function with a callback of key, test (need to include old value later)
+watch(TestTable, function(key, value)
+	print(key, value);
+end)
 
-TableToWatch.x = 10;
-TableToWatch.y = 20;
-TableToWatch.z = 30;
+-- Test table index 5 with a table of "test" with a table of "test2" with a value of true.
+TestTable["5"] = {
+	test = {
+		test2 = true
+	}
+};
 
--- Should have logged all of these changes
+-- Test table index 5 with a table of "test" with a table of "test2" with a value of false.
+TestTable["5"] = {
+	test = {
+		test2 = false
+	}
+};
